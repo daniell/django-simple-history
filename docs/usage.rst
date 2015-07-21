@@ -1,5 +1,5 @@
-Usage
-=====
+Quick Start
+===========
 
 Install
 -------
@@ -16,8 +16,37 @@ Install from PyPI with ``pip``:
 .. _crate.io: https://crate.io/packages/django-simple-history/
 
 
-Quickstart
-----------
+Configure
+---------
+
+Settings
+~~~~~~~~
+
+Add ``simple_history`` to your ``INSTALLED_APPS``
+
+.. code-block:: python
+
+    INSTALLED_APPS = [
+        # ...
+        'simple_history',
+    ]
+
+The historical models can track who made each change. To populate the
+history user automatically you can add middleware to your Django
+settings:
+
+.. code-block:: python
+
+    MIDDLEWARE_CLASSES = [
+        # ...
+        'simple_history.middleware.HistoryRequestMiddleware',
+    ]
+
+If you do not want to use the middleware, you can explicitly indicate
+the user making the change as documented in :ref:`recording_user`.
+
+Models
+~~~~~~
 
 To track history for a model, create an instance of
 ``simple_history.models.HistoricalRecords`` on the model.
@@ -44,6 +73,17 @@ Django tutorial:
 Now all changes to ``Poll`` and ``Choice`` model instances will be tracked in
 the database.
 
+Existing Projects
+~~~~~~~~~~~~~~~~~
+
+For existing projects, you can call the populate command to generate an
+initial change for preexisting model instances:
+
+.. code-block:: bash
+
+    $ python manage.py populate_history --auto
+
+.. _admin_integration:
 
 Integration with Django Admin
 -----------------------------
@@ -56,6 +96,20 @@ This will replace the history object page on the admin site and allow viewing
 and reverting to previous model versions.  Changes made in admin change forms
 will also accurately note the user who made the change.
 
+.. image:: screens/1_poll_history.png
+
+Clicking on an object presents the option to revert to that version of the object.
+
+.. image:: screens/2_revert.png
+
+(The object is reverted to the selected state)
+
+.. image:: screens/3_poll_reverted.png
+
+Reversions like this are added to the history.
+
+.. image:: screens/4_history_after_poll_reverted.png
+
 An example of admin integration for the ``Poll`` and ``Choice`` models:
 
 .. code-block:: python
@@ -66,6 +120,8 @@ An example of admin integration for the ``Poll`` and ``Choice`` models:
 
     admin.site.register(Poll, SimpleHistoryAdmin)
     admin.site.register(Choice, SimpleHistoryAdmin)
+
+Changing a history-tracked model from the admin interface will automatically record the user who made the change (see :ref:`recording_user`).
 
 
 Querying history
@@ -79,7 +135,7 @@ way as a model manager:
 
 .. code-block:: pycon
 
-    >>> from poll.models import Poll, Choice
+    >>> from polls.models import Poll, Choice
     >>> from datetime import datetime
     >>> poll = Poll.objects.create(question="what's up?", pub_date=datetime.now())
     >>>
@@ -105,11 +161,10 @@ records for all ``Choice`` instances can be queried by using the manager on the
 
 .. code-block:: pycon
 
-    >>> choice1 = poll.choice_set.create(choice='Not Much', votes=0)
-    >>> choice2 = poll.choice_set.create(choice='The sky', votes=0)
+    >>> choice1 = poll.choice_set.create(choice_text='Not Much', votes=0)
+    >>> choice2 = poll.choice_set.create(choice_text='The sky', votes=0)
     >>>
     >>> Choice.history
     <simple_history.manager.HistoryManager object at 0x1cc4290>
     >>> Choice.history.all()
     [<HistoricalChoice: Choice object as of 2010-10-25 18:05:12.183340>, <HistoricalChoice: Choice object as of 2010-10-25 18:04:59.047351>]
-
