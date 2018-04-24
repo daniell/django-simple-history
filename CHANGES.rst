@@ -1,8 +1,59 @@
 Changes
 =======
 
-tip (unreleased)
+Unreleased
+----------
+- Add ability to specify custom history_id field (gh-368)
+- Add HistoricalRecord instance properties `prev_record` and `next_record` (gh-365)
+
+2.0 (2018-04-05)
 ----------------
+- Added Django 2.0 support (gh-330)
+- Dropped support for Django<=1.10 (gh-356)
+- Fix bug where history_view ignored user permissions (gh-361)
+- Fixed HistoryRequestMiddleware which hadn't been working for Django>1.9 (gh-364)
+
+1.9.1 (2018-03-30)
+------------------
+- Use get_queryset rather than model.objects in history_view. (gh-303)
+- Change ugettext calls in models.py to ugettext_lazy
+- Resolve issue where model references itself (gh-278)
+- Fix issue with tracking an inherited model (abstract class) (gh-269)
+- Fix history detail view on django-admin for abstract models (gh-308)
+- Dropped support for Django<=1.6 and Python 3.3 (gh-292)
+
+1.9.0 (2017-06-11)
+------------------
+- Add --batchsize option to the populate_history management command. (gh-231)
+- Add ability to show specific attributes in admin history list view. (gh-256)
+- Add Brazilian Portuguese translation file. (gh-279)
+- Fix locale file packaging issue. (gh-280)
+- Add ability to specify reason for history change. (gh-275)
+- Test against Django 1.11 and Python 3.6. (gh-276)
+- Add `excluded_fields` option to exclude fields from history. (gh-274)
+
+1.8.2 (2017-01-19)
+------------------
+- Add Polish locale.
+- Add Django 1.10 support.
+
+1.8.1 (2016-03-19)
+------------------
+- Clear the threadlocal request object when processing the response to prevent test interactions. (gh-213)
+
+1.8.0 (2016-02-02)
+------------------
+- History tracking can be inherited by passing `inherit=True`. (gh-63)
+
+1.7.0 (2015-12-02)
+------------------
+- Add ability to list history in admin when the object instance is deleted. (gh-72)
+- Add ability to change history through the admin. (Enabled with the `SIMPLE_HISTORY_EDIT` setting.)
+- Add Django 1.9 support.
+- Support for custom tables names. (gh-196)
+
+1.6.3 (2015-07-30)
+------------------
 - Respect `to_field` and `db_column` parameters (gh-182)
 
 1.6.2 (2015-07-04)
@@ -27,6 +78,7 @@ tip (unreleased)
 - Fix a bug when models have a ``ForeignKey`` with ``primary_key=True``
 - Do NOT delete the history elements when a user is deleted.
 - Add support for ``latest``
+- Allow setting a reason for change. [using option changeReason]
 
 1.5.3 (2014-11-18)
 ------------------

@@ -1,14 +1,18 @@
 from __future__ import unicode_literals
 
-import django
-from django.db import models
-if django.VERSION >= (1, 5):
-    from .custom_user.models import CustomUser as User
-else:  # django 1.4 compatibility
-    from django.contrib.auth.models import User
+import uuid
 
-from simple_history.models import HistoricalRecords
+from django.apps import apps
+from django.conf import settings
+from django.db import models
+from django.urls import reverse
+
 from simple_history import register
+from simple_history.models import HistoricalRecords
+from .custom_user.models import CustomUser as User
+from .external.models.model1 import AbstractExternal
+
+get_model = apps.get_model
 
 
 class Poll(models.Model):
@@ -16,6 +20,16 @@ class Poll(models.Model):
     pub_date = models.DateTimeField('date published')
 
     history = HistoricalRecords()
+
+    def get_absolute_url(self):
+        return reverse('poll-detail', kwargs={'pk': self.pk})
+
+
+class PollWithExcludeFields(models.Model):
+    question = models.CharField(max_length=200)
+    pub_date = models.DateTimeField('date published')
+
+    history = HistoricalRecords(excluded_fields=['pub_date'])
 
 
 class Temperature(models.Model):
@@ -47,16 +61,24 @@ class WaterLevel(models.Model):
 
 
 class Choice(models.Model):
-    poll = models.ForeignKey(Poll)
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE)
     choice = models.CharField(max_length=200)
     votes = models.IntegerField()
+
 
 register(Choice)
 
 
 class Voter(models.Model):
-    user = models.ForeignKey(User)
-    choice = models.ForeignKey(Choice, related_name='voters')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    choice = models.ForeignKey(
+        Choice,
+        on_delete=models.CASCADE,
+        related_name='voters',
+    )
+
+    def __str__(self):
+        return 'Voter object'
 
 
 class HistoricalRecordsVerbose(HistoricalRecords):
@@ -69,6 +91,7 @@ class HistoricalRecordsVerbose(HistoricalRecords):
             HistoricalRecordsVerbose, self).get_extra_fields(model, fields)
         extra_fields['__str__'] = verbose_str
         return extra_fields
+
 
 register(Voter, records_class=HistoricalRecordsVerbose)
 
@@ -101,7 +124,11 @@ class FileModel(models.Model):
 
 
 class Document(models.Model):
-    changed_by = models.ForeignKey(User, null=True, blank=True)
+    changed_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+    )
     history = HistoricalRecords()
 
     @property
@@ -122,11 +149,11 @@ class Profile(User):
 
 
 class AdminProfile(models.Model):
-    profile = models.ForeignKey(Profile)
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
 
 
 class State(models.Model):
-    library = models.ForeignKey('Library', null=True)
+    library = models.ForeignKey('Library', on_delete=models.CASCADE, null=True)
     history = HistoricalRecords()
 
 
@@ -140,11 +167,11 @@ class HardbackBook(Book):
 
 
 class Bookcase(models.Model):
-    books = models.ForeignKey(HardbackBook)
+    books = models.ForeignKey(HardbackBook, on_delete=models.CASCADE)
 
 
 class Library(models.Model):
-    book = models.ForeignKey(Book, null=True)
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, null=True)
     history = HistoricalRecords()
 
     class Meta:
@@ -176,15 +203,16 @@ class ConcreteAttr(AbstractBase):
 class ConcreteUtil(AbstractBase):
     pass
 
+
 register(ConcreteUtil, bases=[AbstractBase])
 
 
 class MultiOneToOne(models.Model):
-    fk = models.ForeignKey(SecondLevelInheritedModel)
+    fk = models.ForeignKey(SecondLevelInheritedModel, on_delete=models.CASCADE)
 
 
 class SelfFK(models.Model):
-    fk = models.ForeignKey('self', null=True)
+    fk = models.ForeignKey('self', on_delete=models.CASCADE, null=True)
     history = HistoricalRecords()
 
 
@@ -202,6 +230,7 @@ class ExternalModel1(models.Model):
 class ExternalModel3(models.Model):
     name = models.CharField(max_length=100)
 
+
 register(ExternalModel3, app='simple_history.tests.external',
          manager_name='histories')
 
@@ -215,7 +244,7 @@ class UnicodeVerboseName(models.Model):
 
 
 class CustomFKError(models.Model):
-    fk = models.ForeignKey(SecondLevelInheritedModel)
+    fk = models.ForeignKey(SecondLevelInheritedModel, on_delete=models.CASCADE)
     history = HistoricalRecords()
 
 
@@ -226,7 +255,11 @@ class Series(models.Model):
 
 
 class SeriesWork(models.Model):
-    series = models.ForeignKey('Series', related_name='works')
+    series = models.ForeignKey(
+        'Series',
+        on_delete=models.CASCADE,
+        related_name='works',
+    )
     title = models.CharField(max_length=100)
     history = HistoricalRecords()
 
@@ -235,7 +268,11 @@ class SeriesWork(models.Model):
 
 
 class PollInfo(models.Model):
-    poll = models.ForeignKey(Poll, primary_key=True)
+    poll = models.OneToOneField(
+        Poll,
+        on_delete=models.CASCADE,
+        primary_key=True,
+    )
     history = HistoricalRecords()
 
 
@@ -248,7 +285,8 @@ class UserAccessorOverride(models.Model):
 
 
 class Employee(models.Model):
-    manager = models.OneToOneField('Employee', null=True)
+    manager = models.OneToOneField('Employee', null=True,
+                                   on_delete=models.CASCADE)
     history = HistoricalRecords()
 
 
@@ -257,10 +295,140 @@ class Country(models.Model):
 
 
 class Province(models.Model):
-    country = models.ForeignKey(Country, to_field='code')
+    country = models.ForeignKey(
+        Country,
+        on_delete=models.CASCADE,
+        to_field='code',
+    )
     history = HistoricalRecords()
 
 
 class City(models.Model):
-    country = models.ForeignKey(Country, db_column='countryCode')
+    country = models.ForeignKey(
+        Country,
+        on_delete=models.CASCADE,
+        db_column='countryCode',
+    )
     history = HistoricalRecords()
+
+
+class Contact(models.Model):
+    name = models.CharField(max_length=30)
+    email = models.EmailField(max_length=255, unique=True)
+    history = HistoricalRecords(table_name='contacts_history')
+
+
+class ContactRegister(models.Model):
+    name = models.CharField(max_length=30)
+    email = models.EmailField(max_length=255, unique=True)
+
+
+register(ContactRegister, table_name='contacts_register_history')
+
+
+###############################################################################
+#
+# Inheritance examples
+#
+###############################################################################
+
+class TrackedAbstractBaseA(models.Model):
+    history = HistoricalRecords(inherit=True)
+
+    class Meta:
+        abstract = True
+
+
+class TrackedAbstractBaseB(models.Model):
+    history_b = HistoricalRecords(inherit=True)
+
+    class Meta:
+        abstract = True
+
+
+class UntrackedAbstractBase(models.Model):
+
+    class Meta:
+        abstract = True
+
+
+class TrackedConcreteBase(models.Model):
+    history = HistoricalRecords(inherit=True)
+
+
+class UntrackedConcreteBase(models.Model):
+    pass
+
+
+class ConcreteExternal(AbstractExternal):
+    name = models.CharField(max_length=50)
+
+    class Meta:
+        app_label = 'tests'
+
+
+class ConcreteExternal2(AbstractExternal):
+    name = models.CharField(max_length=50)
+
+    class Meta:
+        pass    # Don't set app_label to test inherited module path
+
+
+class TrackedWithAbstractBase(TrackedAbstractBaseA):
+    pass
+
+
+class TrackedWithConcreteBase(TrackedConcreteBase):
+    pass
+
+
+class InheritTracking1(TrackedAbstractBaseA, UntrackedConcreteBase):
+    pass
+
+
+class BaseInheritTracking2(TrackedAbstractBaseA):
+    pass
+
+
+class InheritTracking2(BaseInheritTracking2):
+    pass
+
+
+class BaseInheritTracking3(TrackedAbstractBaseA):
+    pass
+
+
+class InheritTracking3(BaseInheritTracking3):
+    pass
+
+
+class InheritTracking4(TrackedAbstractBaseA):
+    pass
+
+
+class UUIDModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    history = HistoricalRecords(
+        history_id_field=models.UUIDField(default=uuid.uuid4)
+    )
+
+
+class UUIDRegisterModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+
+register(UUIDRegisterModel,
+         history_id_field=models.UUIDField(default=uuid.uuid4))
+
+
+# Set the SIMPLE_HISTORY_HISTORY_ID_USE_UUID
+setattr(settings, 'SIMPLE_HISTORY_HISTORY_ID_USE_UUID', True)
+
+
+class UUIDDefaultModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    history = HistoricalRecords()
+
+
+# Clear the SIMPLE_HISTORY_HISTORY_ID_USE_UUID
+delattr(settings, 'SIMPLE_HISTORY_HISTORY_ID_USE_UUID')

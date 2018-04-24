@@ -1,16 +1,10 @@
-from optparse import make_option
-
+from django.apps import apps
 from django.core.management.base import BaseCommand, CommandError
 
-try:
-    from django.apps import apps
-except ImportError:  # Django < 1.7
-    from django.db.models.loading import get_model
-else:
-    get_model = apps.get_model
-
-from ... import models
 from . import _populate_utils as utils
+from ... import models
+
+get_model = apps.get_model
 
 
 class Command(BaseCommand):
@@ -27,22 +21,33 @@ class Command(BaseCommand):
     EXISTING_HISTORY_FOUND = "Existing history found, skipping model"
     INVALID_MODEL_ARG = "An invalid model was specified"
 
-    option_list = BaseCommand.option_list + (
-        make_option(
+    def add_arguments(self, parser):
+        super(Command, self).add_arguments(parser)
+        parser.add_argument('models', nargs='*', type=str)
+        parser.add_argument(
             '--auto',
             action='store_true',
             dest='auto',
             default=False,
-            help="Automatically search for models with the "
-                 "HistoricalRecords field type",
-        ),
-    )
+            help='Automatically search for models with the '
+                 'HistoricalRecords field type',
+        )
+        parser.add_argument(
+            '--batchsize',
+            action='store',
+            dest='batchsize',
+            default=200,
+            type=int,
+            help='Set a custom batch size when bulk inserting historical '
+                 'records.',
+        )
 
     def handle(self, *args, **options):
         to_process = set()
+        model_strings = options.get('models', []) or args
 
-        if args:
-            for model_pair in self._handle_model_list(*args):
+        if model_strings:
+            for model_pair in self._handle_model_list(*model_strings):
                 to_process.add(model_pair)
 
         elif options['auto']:
@@ -58,7 +63,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.COMMAND_HINT)
 
-        self._process(to_process)
+        self._process(to_process, batch_size=options['batchsize'])
 
     def _handle_model_list(self, *args):
         failing = False
@@ -82,7 +87,7 @@ class Command(BaseCommand):
         else:
             try:
                 model = get_model(app_label, model)
-            except LookupError:  # Django >= 1.7
+            except LookupError:
                 model = None
         if not model:
             raise ValueError(self.MODEL_NOT_FOUND +
@@ -94,7 +99,7 @@ class Command(BaseCommand):
                              " < {model} >\n".format(model=natural_key))
         return model, history_model
 
-    def _process(self, to_process):
+    def _process(self, to_process, batch_size):
         for model, history_model in to_process:
             if history_model.objects.count():
                 self.stderr.write("{msg} {model}\n".format(
@@ -103,5 +108,5 @@ class Command(BaseCommand):
                 ))
                 continue
             self.stdout.write(self.START_SAVING_FOR_MODEL.format(model=model))
-            utils.bulk_history_create(model, history_model)
+            utils.bulk_history_create(model, history_model, batch_size)
             self.stdout.write(self.DONE_SAVING_FOR_MODEL.format(model=model))

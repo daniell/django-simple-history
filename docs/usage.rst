@@ -4,16 +4,13 @@ Quick Start
 Install
 -------
 
-This package is available on `PyPI`_ and `Crate.io`_.
-
-Install from PyPI with ``pip``:
+Install from `PyPI`_ with ``pip``:
 
 .. code-block:: bash
 
     $ pip install django-simple-history
 
 .. _pypi: https://pypi.python.org/pypi/django-simple-history/
-.. _crate.io: https://crate.io/packages/django-simple-history/
 
 
 Configure
@@ -37,13 +34,13 @@ settings:
 
 .. code-block:: python
 
-    MIDDLEWARE_CLASSES = [
+    MIDDLEWARE = [
         # ...
         'simple_history.middleware.HistoryRequestMiddleware',
     ]
 
 If you do not want to use the middleware, you can explicitly indicate
-the user making the change as documented in :ref:`recording_user`.
+the user making the change as documented in :doc:`/advanced`.
 
 Models
 ~~~~~~
@@ -73,6 +70,16 @@ Django tutorial:
 Now all changes to ``Poll`` and ``Choice`` model instances will be tracked in
 the database.
 
+Run Migrations
+~~~~~~~~~~~~~~
+
+With your model changes in place, create and apply the database migrations:
+
+.. code-block:: bash
+
+    $ python manage.py makemigrations
+    $ python manage.py migrate
+
 Existing Projects
 ~~~~~~~~~~~~~~~~~
 
@@ -82,6 +89,9 @@ initial change for preexisting model instances:
 .. code-block:: bash
 
     $ python manage.py populate_history --auto
+
+By default, history rows are inserted in batches of 200. This can be changed if needed for large tables
+by using the ``--batchsize`` option, for example ``--batchsize 500``.
 
 .. _admin_integration:
 
@@ -121,7 +131,40 @@ An example of admin integration for the ``Poll`` and ``Choice`` models:
     admin.site.register(Poll, SimpleHistoryAdmin)
     admin.site.register(Choice, SimpleHistoryAdmin)
 
-Changing a history-tracked model from the admin interface will automatically record the user who made the change (see :ref:`recording_user`).
+Changing a history-tracked model from the admin interface will automatically record the user who made the change (see :doc:`/advanced`).
+
+
+Displaying custom columns in the admin history list view
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, the history log displays one line per change containing
+
+* a link to the detail of the object at that point in time
+* the date and time the object was changed
+* a comment corresponding to the change
+* the author of the change
+
+You can add other columns (for example the object's status to see
+how it evolved) by adding a ``history_list_display`` array of fields to the
+admin class
+
+.. code-block:: python
+
+    from django.contrib import admin
+    from simple_history.admin import SimpleHistoryAdmin
+    from .models import Poll, Choice
+
+
+    class PollHistoryAdmin(SimpleHistoryAdmin):
+        list_display = ["id", "name", "status"]
+        history_list_display = ["status"]
+        search_fields = ['name', 'user__username']
+
+    admin.site.register(Poll, PollHistoryAdmin)
+    admin.site.register(Choice, SimpleHistoryAdmin)
+
+
+.. image:: screens/5_history_list_display.png
 
 
 Querying history
@@ -168,3 +211,29 @@ records for all ``Choice`` instances can be queried by using the manager on the
     <simple_history.manager.HistoryManager object at 0x1cc4290>
     >>> Choice.history.all()
     [<HistoricalChoice: Choice object as of 2010-10-25 18:05:12.183340>, <HistoricalChoice: Choice object as of 2010-10-25 18:04:59.047351>]
+
+Because the history is model, you can also filter it like regularly QuerySets,
+a.k. Choice.history.filter(choice_text='Not Much') will work!
+
+Getting previous and next historical record
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you have a historical record for an instance and would like to retrieve the previous historical record (older) or next historical record (newer), `prev_record` and `next_record` read-only attributes can be used, respectively.
+
+.. code-block:: pycon
+
+    >>> from polls.models import Poll, Choice
+    >>> from datetime import datetime
+    >>> poll = Poll.objects.create(question="what's up?", pub_date=datetime.now())
+    >>>
+    >>> record = poll.history.first()
+    >>> record.prev_record
+    None
+    >>> record.next_record
+    None
+    >>> poll.question = "what is up?"
+    >>> poll.save()
+    >>> record.next_record
+    <HistoricalPoll: Poll object as of 2010-10-25 18:04:13.814128>
+
+If a historical record is the first record, `prev_record` will be `None`.  Similarly, if it is the latest record, `next_record` will be `None`

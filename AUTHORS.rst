@@ -1,34 +1,62 @@
+Maintainers
+===========
+- Trey Hunner
+- Micah Denbraver
+- Ross Mechanic
+
 Authors
 =======
 
 - Aleksey Kladov
 - bradford281
+- Buddy Lindsey, Jr.
 - Brian Dixon
 - Corey Bertram
 - Damien Nozay
+- Daniel Gilge
 - Daniel Levy
 - Daniel Roschka
 - David Hite
+- Eduardo Cuducos
+- Florian Eßer
 - George Vilches
+- Grzegorz Bialy
 - Hamish Downer
 - James Pulec
+- Joao Junior(@joaojunior)
 - Joao Pedro Francese
 - jofusa
 - John Whitlock
+- Jonathan Leroy
 - Jonathan Sanchez
 - Josh Fyne
 - Klaas van Schelven
+- Maciej "RooTer" Urbański
 - Martin Bachwerk
 - Marty Alchin
 - Mauricio de Abreu Antunes
 - Micah Denbraver
+- Phillip Marshall
 - Rajesh Pappula
+- Roberto Aguilar
 - Rod Xavier Bondoc
 - Ross Lote
+- Ross Mechanic
+- Ross Rogers
 - Steven Klass
+- Steeve Chailloux
 - Trey Hunner
 - Ulysses Vilela
 - vnagendra
+- Lucas Wiman
+- Michael England
+- Gregory Bataille
+- Jesse Shapiro
+- Kevin Foster
+- Shane Engelman
+- Ray Logel
+- Nathan Villagaray-Carski
+- Mike Spainhower
 
 Background
 ==========
